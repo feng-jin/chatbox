@@ -17,7 +17,10 @@ body { margin: 0; font-family: system-ui, sans-serif; background: #1a1a1a; color
 .btn { padding: 8px 16px; border-radius: 8px; border: 1px solid #444; background: #2a2a2a; color: #e0e0e0; cursor: pointer; }
 .btn.primary { background: #0a7ea4; border-color: #0a7ea4; color: #fff; }
 #sessionList { list-style: none; padding: 0; margin: 0; }
-#sessionList li { padding: 10px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; }
+#sessionList li { padding: 10px 12px; border-radius: 8px; cursor: pointer; margin-bottom: 4px; display: flex; align-items: center; justify-content: space-between; gap: 8px; }
 #sessionList li:hover { background: #2a2a2a; }
 #sessionList li.active { background: #333; }
+#sessionList li .session-label { flex: 1; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+#sessionList li .btn-delete-session { flex-shrink: 0; width: 24px; height: 24px; padding: 0; border: none; border-radius: 4px; background: transparent; color: #888; font-size: 1.2rem; line-height: 1; cursor: pointer; display: flex; align-items: center; justify-content: center; }
+#sessionList li .btn-delete-session:hover { background: #444; color: #e0e0e0; }
 #fileInput { display: none; }

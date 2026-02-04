@@ -35,3 +35,23 @@ def test_get_history():
     r2 = client.get(f"/api/history?session_id={sid}")
     assert r2.status_code == 200
     assert "items" in r2.json()
+
+
+def test_delete_session():
+    r = client.post("/api/sessions", json={"title": "To delete"})
+    assert r.status_code == 200
+    sid = r.json()["session_id"]
+    r2 = client.delete(f"/api/sessions/{sid}")
+    assert r2.status_code == 200
+    assert r2.json() == {"ok": True}
+    r3 = client.get(f"/api/history?session_id={sid}")
+    assert r3.status_code == 200
+    assert r3.json()["items"] == []
+
+
+def test_delete_session_not_found():
+    import uuid
+    sid = str(uuid.uuid4())
+    r = client.delete(f"/api/sessions/{sid}")
+    assert r.status_code == 404
+    assert r.json()["detail"] == "session not found"

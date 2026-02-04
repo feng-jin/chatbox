@@ -48,6 +48,18 @@ def touch_session(session_id: str) -> None:
         conn.execute("UPDATE sessions SET updated_at = ? WHERE id = ?", (now, session_id))
 
 
+def delete_session(session_id: str) -> bool:
+    """Delete session and its messages, files, chunks. Returns True if session existed."""
+    if not get_session(session_id):
+        return False
+    with get_connection() as conn:
+        conn.execute("DELETE FROM chunks WHERE file_id IN (SELECT id FROM files WHERE session_id = ?)", (session_id,))
+        conn.execute("DELETE FROM files WHERE session_id = ?", (session_id,))
+        conn.execute("DELETE FROM messages WHERE session_id = ?", (session_id,))
+        conn.execute("DELETE FROM sessions WHERE id = ?", (session_id,))
+    return True
+
+
 # Messages
 def add_message(session_id: str, role: str, content: str) -> dict:
     mid = str(uuid.uuid4())

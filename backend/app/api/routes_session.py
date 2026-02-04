@@ -1,7 +1,7 @@
 """Session and history API."""
 from __future__ import annotations
 
-from fastapi import APIRouter, Body
+from fastapi import APIRouter, Body, HTTPException
 
 from backend.app.services import session_service
 
@@ -18,7 +18,14 @@ def create_session(body: dict | None = Body(None)):
 @router.get("/sessions")
 def list_sessions():
     items = session_service.list_sessions()
-    return {"items": [{"session_id": s["session_id"], "title": s["title"], "updated_at": s["updated_at"]} for s in items]}
+    return {"items": [{"session_id": s["session_id"], "title": s["title"], "created_at": s["created_at"], "updated_at": s["updated_at"]} for s in items]}
+
+
+@router.delete("/sessions/{session_id}")
+def delete_session(session_id: str):
+    if not session_service.delete_session(session_id):
+        raise HTTPException(status_code=404, detail="session not found")
+    return {"ok": True}
 
 
 @router.get("/history")

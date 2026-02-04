@@ -18,23 +18,80 @@ async function api(path, options = {}) {
   return res.text();
 }
 
+function normalizeIso(isoString) {
+  if (!isoString) return '';
+  // Some browsers are strict with microseconds (>3 digits).
+  return String(isoString).replace(/(\.\d{3})\d+/, '$1');
+}
+
+function formatCreatedAt(isoString) {
+  const d = new Date(normalizeIso(isoString));
+  if (Number.isNaN(d.getTime())) return '';
+  return d.toLocaleString('zh-CN', {
+    month: 'numeric',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+}
+
+function isUuidLike(text) {
+  return /^[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i.test(text);
+}
+
+function getDisplayTitle(session) {
+  const rawTitle = (session.title || '').trim();
+  if (rawTitle && !isUuidLike(rawTitle)) return rawTitle;
+  const timeText = formatCreatedAt(session.created_at) || formatCreatedAt(session.updated_at);
+  return timeText ? `会话 ${timeText}` : '未命名会话';
+}
+
 async function loadSessions() {
   const data = await api('/api/sessions');
   const ul = document.getElementById('sessionList');
   ul.innerHTML = '';
   (data.items || []).forEach(s => {
+    const displayTitle = getDisplayTitle(s);
     const li = document.createElement('li');
-    li.textContent = s.title || s.session_id?.slice(0, 8) || '新会话';
     li.dataset.sessionId = s.session_id;
     if (s.session_id === currentSessionId) li.classList.add('active');
-    li.addEventListener('click', () => selectSession(s.session_id, s.title));
+    const span = document.createElement('span');
+    span.className = 'session-label';
+    span.textContent = displayTitle;
+    const delBtn = document.createElement('button');
+    delBtn.type = 'button';
+    delBtn.className = 'btn-delete-session';
+    delBtn.title = '删除会话';
+    delBtn.textContent = '×';
+    delBtn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      deleteSession(s.session_id);
+    });
+    li.appendChild(span);
+    li.appendChild(delBtn);
+    li.addEventListener('click', () => selectSession(s.session_id, displayTitle));
     ul.appendChild(li);
   });
 }
 
+async function deleteSession(sessionId) {
+  if (!confirm('确定要删除该会话吗？')) return;
+  try {
+    await api(`/api/sessions/${encodeURIComponent(sessionId)}`, { method: 'DELETE' });
+    if (currentSessionId === sessionId) {
+      currentSessionId = null;
+      document.getElementById('sessionTitle').textContent = '选择或新建会话';
+      document.getElementById('messages').innerHTML = '';
+    }
+    await loadSessions();
+  } catch (err) {
+    alert('删除失败: ' + err.message);
+  }
+}
+
 function selectSession(sessionId, title) {
   currentSessionId = sessionId;
-  document.getElementById('sessionTitle').textContent = title || sessionId?.slice(0, 8) || '会话';
+  document.getElementById('sessionTitle').textContent = title || '未命名会话';
   document.querySelectorAll('#sessionList li').forEach(el => {
     el.classList.toggle('active', el.dataset.sessionId === sessionId);
   });
@@ -65,7 +122,7 @@ document.getElementById('newSession').addEventListener('click', async () => {
   const data = await api('/api/sessions', { method: 'POST', body: JSON.stringify({ title: '' }) });
   currentSessionId = data.session_id;
   await loadSessions();
-  selectSession(data.session_id, data.title);
+  selectSession(data.session_id, getDisplayTitle(data));
 });
 
 document.getElementById('chatForm').addEventListener('submit', async (e) => {
