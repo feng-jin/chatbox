@@ -168,7 +168,22 @@ document.getElementById('chatForm').addEventListener('submit', async (e) => {
   e.preventDefault();
   const input = document.getElementById('messageInput');
   const message = input.value?.trim();
-  if (!message || !currentSessionId) return;
+  if (!message) return;
+  if (!currentSessionId) {
+    try {
+      const sessionData = await api('/api/sessions', { method: 'POST', body: JSON.stringify({ title: '' }) });
+      currentSessionId = sessionData.session_id;
+      await loadSessions();
+      document.getElementById('messages').innerHTML = '';
+      document.getElementById('sessionTitle').textContent = getDisplayTitle(sessionData) || '未命名会话';
+      document.querySelectorAll('#sessionList li').forEach(el => {
+        el.classList.toggle('active', el.dataset.sessionId === currentSessionId);
+      });
+    } catch (err) {
+      alert('创建会话失败: ' + err.message);
+      return;
+    }
+  }
   input.value = '';
   const useRag = document.getElementById('useRag').checked;
   const container = document.getElementById('messages');
