@@ -67,7 +67,7 @@ uv run pytest tests/ --cov=backend --cov-report=term-missing
 |------|------|------|
 | LLM_PROVIDER | 模型提供商：gemini / deepseek / mock | gemini |
 | LLM_API_KEY | API 密钥 | - |
-| LLM_MODEL | 模型名 | gemini-2.0-flash |
+| LLM_MODEL | 模型名 | gemini-2.5-flash |
 | DATABASE_URL | SQLite 路径，如 sqlite:///data/chat.db | sqlite:///data/chat.db |
 | DATA_DIR | 数据目录（上传、DB 等） | data |
 
