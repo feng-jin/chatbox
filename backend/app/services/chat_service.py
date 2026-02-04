@@ -2,7 +2,7 @@
 from __future__ import annotations
 
 from backend.app.core.llm_client import get_llm_client
-from backend.app.core.prompt_builder import build_rag_prompt
+from backend.app.core.prompt_builder import build_chat_prompt, build_rag_prompt
 from backend.app.db import repo
 from backend.app.services import rag_service
 
@@ -17,12 +17,18 @@ def chat(
     if not repo.get_session(session_id):
         raise ValueError("session not found")
 
+    # Read recent history before writing latest user message, so prompt is not duplicated.
+    history = repo.list_messages(session_id=session_id, limit=20)
     repo.add_message(session_id=session_id, role="user", content=message)
     if use_rag and file_ids:
         context_chunks = rag_service.get_context_chunks(query=message, file_ids=file_ids)
-        prompt = build_rag_prompt(user_message=message, context_chunks=context_chunks)
+        prompt = build_rag_prompt(
+            user_message=message,
+            context_chunks=context_chunks,
+            history_messages=history,
+        )
     else:
-        prompt = message
+        prompt = build_chat_prompt(user_message=message, history_messages=history)
     client = get_llm_client()
     resp = client.complete(prompt)
     repo.add_message(session_id=session_id, role="assistant", content=resp.content)

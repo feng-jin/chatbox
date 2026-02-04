@@ -86,6 +86,14 @@ uv run pytest tests/ --cov=backend --cov-report=term-missing
 - `POST /api/chat`：发送消息并获取回复（可选 use_rag、file_ids）
 - `POST /api/files`：上传文件（multipart/form-data）
 
+## 文件问答策略
+
+- 技术路线：基于 **RAG（检索增强生成）**。这是文档问答中的主流方案：先检索，再生成。
+- 支持格式：`.txt`、`.pdf`（上传接口会校验后缀）。
+- 多文件对话：可多次上传文件，前端会收集 `file_ids`，聊天时统一传给 `/api/chat` 做联合检索。
+- 长文档处理：采用“分块 + 重叠”策略（`CHUNK_SIZE` / `CHUNK_OVERLAP` 可配置），先切块再向量检索 Top-K 片段注入提示词。
+- 失败降级：若文件已上传但索引失败，接口返回 `indexed=false`（`status=uploaded`），文件记录仍保留，可后续重试索引。
+
 ## License
 
 MIT
