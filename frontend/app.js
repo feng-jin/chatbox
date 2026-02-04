@@ -112,6 +112,45 @@ async function loadHistory() {
   container.scrollTop = container.scrollHeight;
 }
 
+function appendUserBubble(container, content) {
+  const div = document.createElement('div');
+  div.className = 'msg user';
+  div.innerHTML = `<div class="role">user</div><div class="content">${escapeHtml(content)}</div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+}
+
+function appendLoadingBubble(container) {
+  const div = document.createElement('div');
+  div.className = 'msg assistant loading';
+  div.dataset.loading = '1';
+  div.innerHTML = `<div class="role">assistant</div><div class="content"><span class="loading-dots"><span>.</span><span>.</span><span>.</span></span></div>`;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return div;
+}
+
+function appendAssistantBubbleWithTyping(container, fullText, onComplete) {
+  const div = document.createElement('div');
+  div.className = 'msg assistant';
+  div.innerHTML = '<div class="role">assistant</div><div class="content"></div>';
+  const contentEl = div.querySelector('.content');
+  container.appendChild(div);
+  const TYPING_INTERVAL = 25;
+  let index = 0;
+  function tick() {
+    if (index >= fullText.length) {
+      if (onComplete) onComplete();
+      return;
+    }
+    index += 1;
+    contentEl.textContent = fullText.slice(0, index);
+    container.scrollTop = container.scrollHeight;
+    setTimeout(tick, TYPING_INTERVAL);
+  }
+  setTimeout(tick, TYPING_INTERVAL);
+}
+
 function escapeHtml(s) {
   const div = document.createElement('div');
   div.textContent = s;
@@ -132,6 +171,11 @@ document.getElementById('chatForm').addEventListener('submit', async (e) => {
   if (!message || !currentSessionId) return;
   input.value = '';
   const useRag = document.getElementById('useRag').checked;
+  const container = document.getElementById('messages');
+
+  appendUserBubble(container, message);
+  const loadingEl = appendLoadingBubble(container);
+
   try {
     const data = await api('/api/chat', {
       method: 'POST',
@@ -142,19 +186,23 @@ document.getElementById('chatForm').addEventListener('submit', async (e) => {
         file_ids: uploadedFileIds,
       }),
     });
-    await loadHistory();
-    await loadSessions();
-    const activeLi = document.querySelector(`#sessionList li[data-session-id="${currentSessionId}"]`);
-    if (activeLi) {
-      const label = activeLi.querySelector('.session-label');
-      if (label) document.getElementById('sessionTitle').textContent = label.textContent || '未命名会话';
-    }
+    loadingEl.remove();
+    appendAssistantBubbleWithTyping(container, data.assistant_message || '', () => {
+      loadSessions().then(() => {
+        const activeLi = document.querySelector(`#sessionList li[data-session-id="${currentSessionId}"]`);
+        if (activeLi) {
+          const label = activeLi.querySelector('.session-label');
+          if (label) document.getElementById('sessionTitle').textContent = label.textContent || '未命名会话';
+        }
+      });
+    });
   } catch (err) {
-    const container = document.getElementById('messages');
+    loadingEl.remove();
     const div = document.createElement('div');
     div.className = 'msg';
     div.innerHTML = `<div class="role">error</div><div class="content">${escapeHtml(err.message)}</div>`;
     container.appendChild(div);
+    container.scrollTop = container.scrollHeight;
   }
 });
 
