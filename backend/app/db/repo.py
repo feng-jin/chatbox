@@ -25,9 +25,18 @@ def create_session(title: str = "") -> dict:
 
 
 def list_sessions(limit: int = 50) -> list[dict]:
+    """List sessions ordered by last chat time (latest message first); no messages = use session updated_at."""
     with get_connection() as conn:
         rows = conn.execute(
-            "SELECT id, title, created_at, updated_at FROM sessions ORDER BY updated_at DESC LIMIT ?",
+            """SELECT s.id, s.title, s.created_at, s.updated_at
+               FROM sessions s
+               LEFT JOIN (
+                 SELECT session_id, MAX(created_at) AS last_msg_at
+                 FROM messages
+                 GROUP BY session_id
+               ) m ON s.id = m.session_id
+               ORDER BY COALESCE(m.last_msg_at, s.updated_at) DESC
+               LIMIT ?""",
             (limit,),
         ).fetchall()
     return [dict(r) for r in rows]
@@ -46,6 +55,12 @@ def touch_session(session_id: str) -> None:
     now = _now_iso()
     with get_connection() as conn:
         conn.execute("UPDATE sessions SET updated_at = ? WHERE id = ?", (now, session_id))
+
+
+def update_session_title(session_id: str, title: str) -> None:
+    """Set session title (e.g. first user question)."""
+    with get_connection() as conn:
+        conn.execute("UPDATE sessions SET title = ? WHERE id = ?", (title[:500].strip(), session_id))
 
 
 def delete_session(session_id: str) -> bool:

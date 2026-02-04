@@ -143,6 +143,12 @@ document.getElementById('chatForm').addEventListener('submit', async (e) => {
       }),
     });
     await loadHistory();
+    await loadSessions();
+    const activeLi = document.querySelector(`#sessionList li[data-session-id="${currentSessionId}"]`);
+    if (activeLi) {
+      const label = activeLi.querySelector('.session-label');
+      if (label) document.getElementById('sessionTitle').textContent = label.textContent || '未命名会话';
+    }
   } catch (err) {
     const container = document.getElementById('messages');
     const div = document.createElement('div');

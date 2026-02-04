@@ -19,6 +19,9 @@ def chat(
 
     # Read recent history before writing latest user message, so prompt is not duplicated.
     history = repo.list_messages(session_id=session_id, limit=20)
+    # If this is the first message, use it as the session title for the list.
+    if not history:
+        repo.update_session_title(session_id, message)
     repo.add_message(session_id=session_id, role="user", content=message)
     if use_rag and file_ids:
         context_chunks = rag_service.get_context_chunks(query=message, file_ids=file_ids)
